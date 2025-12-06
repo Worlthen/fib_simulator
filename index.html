@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIB 虚拟仿真系统 | Focused Ion Beam Simulator</title>
+    <meta name="description" content="基于 WebGL 的聚焦离子束 (FIB) 实时仿真系统，包含 Yamamura 溅射模型、多层材料支持、教学演示等功能。">
+    <meta name="keywords" content="FIB, Focused Ion Beam, 聚焦离子束, WebGL, Three.js, 仿真, 半导体">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔬</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0a0f;
+            --card-bg: rgba(20, 25, 35, 0.9);
+            --primary: #4db8ff;
+            --secondary: #00d4aa;
+            --accent: #7c4dff;
+            --text: #e0e0e0;
+            --text-dim: #888;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(77, 184, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(0, 212, 170, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(124, 77, 255, 0.05) 0%, transparent 70%);
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 60px 20px 40px;
+        }
+
+        .logo {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Cards Grid */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-top: 50px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(77, 184, 255, 0.3);
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .card p {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .card-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 25px;
+        }
+
+        .feature-tag {
+            background: rgba(77, 184, 255, 0.15);
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .card-btn {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), #0088cc);
+            color: #fff;
+            padding: 12px 28px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .card-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 20px rgba(77, 184, 255, 0.3);
+        }
+
+        .card:nth-child(2) .feature-tag {
+            background: rgba(0, 212, 170, 0.15);
+            color: var(--secondary);
+        }
+
+        .card:nth-child(2) .card-btn {
+            background: linear-gradient(135deg, var(--secondary), #00a080);
+        }
+
+        .card:nth-child(3) .feature-tag {
+            background: rgba(124, 77, 255, 0.15);
+            color: var(--accent);
+        }
+
+        .card:nth-child(3) .card-btn {
+            background: linear-gradient(135deg, var(--accent), #536dfe);
+        }
+
+        /* Info Section */
+        .info-section {
+            margin-top: 80px;
+            padding: 40px;
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-section h3 {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: var(--secondary);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .info-item h4 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .info-item p {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .logo {
+                font-size: 48px;
+            }
+
+            .card {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-animation"></div>
+
+    <header>
+        <div class="logo">🔬</div>
+        <h1>FIB 虚拟仿真系统</h1>
+        <p class="subtitle">
+            基于 WebGL 的聚焦离子束 (Focused Ion Beam) 实时仿真平台<br>
+            采用 Yamamura 溅射模型，支持多层材料结构
+        </p>
+    </header>
+
+    <div class="container">
+        <div class="cards">
+            <!-- Basic Version -->
+            <div class="card">
+                <div class="card-icon">⚡</div>
+                <h2>基础仿真版</h2>
+                <p>轻量级 FIB 加工仿真，适合快速体验和了解 FIB 基本原理。支持手动加工、参数调节和实时 3D 可视化。</p>
+                <div class="card-features">
+                    <span class="feature-tag">Yamamura 模型</span>
+                    <span class="feature-tag">实时渲染</span>
+                    <span class="feature-tag">粒子效果</span>
+                </div>
+                <a href="FIB.html" class="card-btn">立即体验 →</a>
+            </div>
+
+            <!-- Education Version -->
+            <div class="card">
+                <div class="card-icon">🎓</div>
+                <h2>教学演示版</h2>
+                <p>专为教学设计，内置多种预设加工图案，支持自动铣削演示。实时深度剖面图帮助理解 FIB 加工过程。</p>
+                <div class="card-features">
+                    <span class="feature-tag">预设图案</span>
+                    <span class="feature-tag">自动铣削</span>
+                    <span class="feature-tag">深度剖面</span>
+                    <span class="feature-tag">保存/加载</span>
+                </div>
+                <a href="FIB_Education.html" class="card-btn">开始学习 →</a>
+            </div>
+
+            <!-- Research Version -->
+            <div class="card">
+                <div class="card-icon">🔬</div>
+                <h2>科研工具版</h2>
+                <p>面向科研人员的专业工具，支持多层材料结构仿真，实时计算剂量、时间、体积等参数，支持 STL 导出。</p>
+                <div class="card-features">
+                    <span class="feature-tag">多层材料</span>
+                    <span class="feature-tag">剂量计算</span>
+                    <span class="feature-tag">STL 导出</span>
+                    <span class="feature-tag">数据分析</span>
+                </div>
+                <a href="FIB_Research.html" class="card-btn">开始研究 →</a>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h3>📖 关于 FIB 技术</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <h4>什么是 FIB？</h4>
+                    <p>聚焦离子束 (Focused Ion Beam) 是一种利用聚焦的离子束（通常是 Ga⁺）对材料进行纳米级加工的技术，广泛应用于半导体失效分析、TEM 样品制备等领域。</p>
+                </div>
+                <div class="info-item">
+                    <h4>Yamamura 模型</h4>
+                    <p>本仿真采用 Yamamura 溅射产额模型，考虑了入射角度对溅射率的影响，能够真实模拟 FIB 加工时的陡峭侧壁形貌。</p>
+                </div>
+                <div class="info-item">
+                    <h4>技术栈</h4>
+                    <p>基于 Three.js + WebGL + GPGPU 着色器实现，支持现代浏览器（Chrome、Edge、Firefox），无需安装任何插件。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>
+            FIB 虚拟仿真系统 |
+            <a href="https://github.com" target="_blank">GitHub</a> |
+            基于 Three.js 构建
+        </p>
+        <p style="margin-top: 8px; opacity: 0.6;">© 2024 仅供学习交流使用</p>
+    </footer>
+</body>
+
+</html>

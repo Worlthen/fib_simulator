@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIB 教学演示系统</title>
+    <style>
+        * {
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #0a0a0a;
+            font-family: 'Segoe UI', sans-serif;
+            color: #fff;
+        }
+
+        #canvas {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .panel {
+            position: fixed;
+            background: rgba(15, 20, 25, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            z-index: 10;
+        }
+
+        #ctrlPanel {
+            top: 20px;
+            right: 20px;
+            width: 280px;
+        }
+
+        #profilePanel {
+            bottom: 20px;
+            left: 20px;
+            width: 400px;
+            height: 180px;
+        }
+
+        h1 {
+            font-size: 15px;
+            color: #4db8ff;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        h2 {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            margin: 10px 0 6px;
+            letter-spacing: 1px;
+        }
+
+        .row {
+            margin-bottom: 8px;
+        }
+
+        .row label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-bottom: 3px;
+        }
+
+        .val {
+            color: #4db8ff;
+            font-weight: bold;
+            font-family: monospace;
+        }
+
+        input[type=range] {
+            width: 100%;
+            -webkit-appearance: none;
+            background: #333;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #4db8ff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        select,
+        input[type=text] {
+            width: 100%;
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 80px;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4db8ff, #0088cc);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #6cc5ff, #00aaee);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #d32f2f;
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #f44336;
+        }
+
+        .btn-success {
+            background: #388e3c;
+            color: #fff;
+        }
+
+        .btn-success:hover {
+            background: #4caf50;
+        }
+
+        .btn-secondary {
+            background: #555;
+            color: #fff;
+        }
+
+        .btn-secondary:hover {
+            background: #666;
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin: 8px 0;
+        }
+
+        .pattern-btn {
+            aspect-ratio: 1;
+            background: #222;
+            border: 2px solid #444;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.2s;
+        }
+
+        .pattern-btn:hover {
+            border-color: #4db8ff;
+            background: #1a2a3a;
+        }
+
+        .pattern-btn.active {
+            border-color: #4db8ff;
+            background: #1a3a4a;
+            box-shadow: 0 0 10px rgba(77, 184, 255, 0.3);
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            font-size: 11px;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+
+        .led {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ffaa00;
+            margin-right: 8px;
+        }
+
+        .led.on {
+            background: #00ff00;
+            box-shadow: 0 0 8px #00ff00;
+        }
+
+        .led.milling {
+            background: #ff0000;
+            box-shadow: 0 0 8px #ff0000;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        #profileCanvas {
+            width: 100%;
+            height: 120px;
+            background: #111;
+            border-radius: 4px;
+        }
+
+        .profile-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .hint {
+            font-size: 10px;
+            color: #666;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4db8ff, #00ff88);
+            width: 0%;
+            transition: width 0.1s;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+
+<body>
+    <div id="ctrlPanel" class="panel">
+        <h1>🔬 FIB 教学演示系统</h1>
+
+        <h2>束流参数</h2>
+        <div class="row">
+            <label>加速电压 (kV) <span class="val" id="vVolt">30</span></label>
+            <input type="range" id="iVolt" min="5" max="30" step="5" value="30">
+        </div>
+        <div class="row">
+            <label>束流电流 (nA) <span class="val" id="vCurr">5.0</span></label>
+            <input type="range" id="iCurr" min="0.1" max="20" step="0.1" value="5">
+        </div>
+        <div class="row">
+            <label>材料</label>
+            <select id="iMat">
+                <option value="1.0">Silicon (Si)</option>
+                <option value="2.5">Gold (Au)</option>
+                <option value="0.2">Diamond (C)</option>
+            </select>
+        </div>
+
+        <h2>预设图案</h2>
+        <div class="pattern-grid">
+            <div class="pattern-btn" data-pattern="none" title="手动模式">✋</div>
+            <div class="pattern-btn" data-pattern="circle" title="圆形">⭕</div>
+            <div class="pattern-btn" data-pattern="rect" title="矩形">⬜</div>
+            <div class="pattern-btn" data-pattern="line" title="直线">➖</div>
+            <div class="pattern-btn" data-pattern="cross" title="十字">✚</div>
+            <div class="pattern-btn" data-pattern="grid" title="网格">▦</div>
+            <div class="pattern-btn" data-pattern="spiral" title="螺旋">🌀</div>
+            <div class="pattern-btn" data-pattern="text" title="文字">T</div>
+        </div>
+        <div class="row" id="textRow" style="display:none;">
+            <input type="text" id="iText" placeholder="输入文字 (英文)" maxlength="6" value="FIB">
+        </div>
+        <div class="row">
+            <label>图案尺寸 <span class="val" id="vSize">1.0</span></label>
+            <input type="range" id="iSize" min="0.2" max="2.0" step="0.1" value="1.0">
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-primary" id="btnMill">▶ 开始铣削</button>
+            <button class="btn btn-danger" id="btnStop" disabled>■ 停止</button>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress"></div>
+        </div>
+
+        <h2>工具</h2>
+        <div class="btn-group">
+            <button class="btn btn-secondary" id="btnReset">重置</button>
+            <button class="btn btn-success" id="btnSave">保存</button>
+            <button class="btn btn-secondary" id="btnLoad">加载</button>
+        </div>
+        <input type="file" id="fileInput" accept=".json,.png" style="display:none;">
+
+        <div class="status">
+            <div class="led" id="led"></div>
+            <span id="stat">就绪 - 选择图案后点击开始</span>
+        </div>
+        <div class="hint">左键手动加工 | 右键旋转 | 滚轮缩放</div>
+    </div>
+
+    <div id="profilePanel" class="panel">
+        <h1>📊 深度剖面图</h1>
+        <canvas id="profileCanvas"></canvas>
+        <div class="profile-info">
+            <span>最大深度: <span class="val" id="maxDepth">0.00</span> μm</span>
+            <span>剖面位置: <span class="val" id="profilePos">Y = 0</span></span>
+        </div>
+    </div>
+
+    <div id="canvas"></div>
+
+    <!-- 仿真着色器 -->
+    <script id="simFrag" type="x-shader/x-fragment">
+        uniform sampler2D tH;
+        uniform vec2 uPos;
+        uniform float uR, uI, uY;
+        uniform int uOn;
+        varying vec2 vUv;
+        
+        const float TEX = 1.0/512.0, F = 1.8, S = 2.5, TM = 1.3;
+        
+        float gauss(vec2 p, vec2 c, float s) { vec2 d = p - c; return exp(-dot(d,d) / (2.0*s*s)); }
+        
+        vec3 getNormal() {
+            float hL = texture2D(tH, vUv - vec2(TEX,0)).r;
+            float hR = texture2D(tH, vUv + vec2(TEX,0)).r;
+            float hD = texture2D(tH, vUv - vec2(0,TEX)).r;
+            float hU = texture2D(tH, vUv + vec2(0,TEX)).r;
+            return normalize(vec3(-(hR-hL)*0.05, 1.0, -(hU-hD)*0.05));
+        }
+        
+        float yamamura(float ct) {
+            ct = max(ct, 0.1);
+            float t = acos(ct);
+            if(t > TM) return exp(-(t-TM)*5.0);
+            return pow(ct, -F) * exp(-S*(1.0/ct - 1.0));
+        }
+        
+        void main() {
+            float h = texture2D(tH, vUv).r;
+            if(uOn == 1) {
+                float beam = gauss(vUv, uPos, uR);
+                vec3 n = getNormal();
+                float ct = max(n.y, 0.0);
+                float y = yamamura(ct);
+                float rem = beam * uI * uY * y * min(1.0/max(ct,0.3), 3.0);
+                if(rem > 1e-5) h -= rem;
+                float d = length(vUv - uPos);
+                if(d > uR*2.0 && d < uR*4.0) h += beam * uI * 0.05 * exp(-(d - uR*2.0)*10.0);
+            }
+            float hL = texture2D(tH, vUv - vec2(TEX,0)).r;
+            float hR = texture2D(tH, vUv + vec2(TEX,0)).r;
+            float hD = texture2D(tH, vUv - vec2(0,TEX)).r;
+            float hU = texture2D(tH, vUv + vec2(0,TEX)).r;
+            h += ((hL+hR+hD+hU)/4.0 - h) * 0.001;
+            gl_FragColor = vec4(clamp(h, -5.0, 0.5), 0, 0, 1);
+        }
+    </script>
+    <script id="simVert" type="x-shader/x-vertex">
+        varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+    </script>
+
+    <!-- 渲染着色器 -->
+    <script id="renVert" type="x-shader/x-vertex">
+        uniform sampler2D tH;
+        varying vec2 vUv; varying float vH;
+        void main() {
+            vUv = uv; float h = texture2D(tH, uv).r; vH = h;
+            vec3 p = position; p.y += h * 2.0;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+        }
+    </script>
+    <script id="renFrag" type="x-shader/x-fragment">
+        uniform sampler2D tH;
+        varying vec2 vUv; varying float vH;
+        void main() {
+            float TEX = 1.0/512.0;
+            float h = texture2D(tH, vUv).r * 2.0;
+            float hx = texture2D(tH, vUv + vec2(TEX,0)).r * 2.0;
+            float hy = texture2D(tH, vUv + vec2(0,TEX)).r * 2.0;
+            vec3 n = normalize(cross(vec3(0, hy-h, TEX), vec3(TEX, hx-h, 0)));
+            vec3 L = normalize(vec3(1, 2, 1));
+            float diff = max(dot(n, L), 0.0);
+            float spec = pow(max(dot(reflect(-L, n), vec3(0,0,1)), 0.0), 32.0);
+            float edge = pow(1.0 - abs(n.y), 2.0);
+            vec3 base = mix(vec3(0.2, 0.22, 0.25), vec3(0.1, 0.05, 0.05), clamp(abs(vH), 0.0, 1.0));
+            gl_FragColor = vec4(base * (0.2 + diff) + vec3(0.4) * spec + vec3(0.4) * edge, 1.0);
+        }
+    </script>
+
+    <script>
+        (function () {
+            const SIM = 512, PARTICLES = 1000;
+            const $ = id => document.getElementById(id);
+
+            // Three.js Setup
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050505);
+            scene.fog = new THREE.FogExp2(0x050505, 0.02);
+
+            const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100);
+            camera.position.set(0, 8, 8);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+            renderer.setSize(innerWidth, innerHeight);
+            renderer.setPixelRatio(devicePixelRatio);
+            $('canvas').appendChild(renderer.domElement);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+
+            // GPGPU
+            const rtOpts = { format: THREE.RGBAFormat, type: THREE.FloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter };
+            let rtA = new THREE.WebGLRenderTarget(SIM, SIM, rtOpts);
+            let rtB = new THREE.WebGLRenderTarget(SIM, SIM, rtOpts);
+
+            const simScene = new THREE.Scene();
+            const simCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+            const simUni = {
+                tH: { value: null },
+                uPos: { value: new THREE.Vector2(0.5, 0.5) },
+                uR: { value: 0.02 },
+                uI: { value: 0.01 },
+                uY: { value: 1.0 },
+                uOn: { value: 0 }
+            };
+            const simMat = new THREE.ShaderMaterial({
+                uniforms: simUni,
+                vertexShader: $('simVert').textContent,
+                fragmentShader: $('simFrag').textContent
+            });
+            simScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), simMat));
+
+            // Terrain
+            const terrainGeo = new THREE.PlaneGeometry(10, 10, 256, 256);
+            terrainGeo.rotateX(-Math.PI / 2);
+            const terrainUni = { tH: { value: null } };
+            const terrainMat = new THREE.ShaderMaterial({
+                uniforms: terrainUni,
+                vertexShader: $('renVert').textContent,
+                fragmentShader: $('renFrag').textContent
+            });
+            scene.add(new THREE.Mesh(terrainGeo, terrainMat));
+            scene.add(new THREE.GridHelper(20, 40, 0x444444, 0x222222));
+
+            // Beam
+            const beamGeo = new THREE.CylinderGeometry(0.02, 0.05, 10, 12);
+            beamGeo.translate(0, 5, 0);
+            const beamMat = new THREE.MeshBasicMaterial({ color: 0x4db8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending });
+            const beam = new THREE.Mesh(beamGeo, beamMat);
+            scene.add(beam);
+
+            // Particles
+            const pPos = new Float32Array(PARTICLES * 3);
+            const pVel = new Float32Array(PARTICLES * 3);
+            const pLife = new Float32Array(PARTICLES);
+            for (let i = 0; i < PARTICLES; i++) { pPos[i * 3 + 1] = -100; }
+            const pGeo = new THREE.BufferGeometry();
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0xffaa00, size: 0.05, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending })));
+
+            // Interaction
+            const ray = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+            const hit = new THREE.Vector3();
+            let isDown = false, worldHit = new THREE.Vector3();
+
+            // Pattern milling state
+            let currentPattern = 'none';
+            let isMilling = false;
+            let millPath = [];
+            let millIndex = 0;
+            let millProgress = 0;
+
+            // DOM Elements
+            const led = $('led'), stat = $('stat'), progress = $('progress');
+            const btnMill = $('btnMill'), btnStop = $('btnStop');
+            const patternBtns = document.querySelectorAll('.pattern-btn');
+
+            // Pattern generation
+            function generatePath(pattern, size) {
+                const paths = [];
+                const steps = 100;
+                const s = size * 0.15;
+
+                switch (pattern) {
+                    case 'circle':
+                        for (let i = 0; i <= steps; i++) {
+                            const a = (i / steps) * Math.PI * 2;
+                            paths.push({ x: 0.5 + Math.cos(a) * s, y: 0.5 + Math.sin(a) * s });
+                        }
+                        // Fill inside
+                        for (let r = s - 0.02; r > 0; r -= 0.02) {
+                            for (let i = 0; i <= steps / 2; i++) {
+                                const a = (i / (steps / 2)) * Math.PI * 2;
+                                paths.push({ x: 0.5 + Math.cos(a) * r, y: 0.5 + Math.sin(a) * r });
+                            }
+                        }
+                        break;
+                    case 'rect':
+                        for (let y = -s; y <= s; y += 0.015) {
+                            const dir = Math.floor((y + s) / 0.015) % 2 === 0 ? 1 : -1;
+                            for (let x = -s; x <= s; x += 0.01) {
+                                paths.push({ x: 0.5 + (dir > 0 ? x : -x), y: 0.5 + y });
+                            }
+                        }
+                        break;
+                    case 'line':
+                        for (let i = 0; i <= steps; i++) {
+                            paths.push({ x: 0.5 - s + (i / steps) * s * 2, y: 0.5 });
+                        }
+                        for (let i = 0; i <= steps; i++) {
+                            paths.push({ x: 0.5 + s - (i / steps) * s * 2, y: 0.5 + 0.01 });
+                        }
+                        break;
+                    case 'cross':
+                        for (let w = 0; w < 3; w++) {
+                            const off = (w - 1) * 0.015;
+                            for (let i = 0; i <= steps; i++) paths.push({ x: 0.5 - s + (i / steps) * s * 2, y: 0.5 + off });
+                            for (let i = 0; i <= steps; i++) paths.push({ x: 0.5 + off, y: 0.5 - s + (i / steps) * s * 2 });
+                        }
+                        break;
+                    case 'grid':
+                        const lines = 5;
+                        for (let l = 0; l < lines; l++) {
+                            const p = -s + (l / (lines - 1)) * s * 2;
+                            for (let i = 0; i <= steps / 2; i++) paths.push({ x: 0.5 - s + (i / (steps / 2)) * s * 2, y: 0.5 + p });
+                            for (let i = 0; i <= steps / 2; i++) paths.push({ x: 0.5 + p, y: 0.5 - s + (i / (steps / 2)) * s * 2 });
+                        }
+                        break;
+                    case 'spiral':
+                        for (let i = 0; i <= steps * 3; i++) {
+                            const t = i / (steps * 3);
+                            const a = t * Math.PI * 6;
+                            const r = t * s;
+                            paths.push({ x: 0.5 + Math.cos(a) * r, y: 0.5 + Math.sin(a) * r });
+                        }
+                        break;
+                    case 'text':
+                        const text = $('iText').value.toUpperCase() || 'FIB';
+                        const charPaths = getTextPaths(text, s);
+                        paths.push(...charPaths);
+                        break;
+                }
+                return paths;
+            }
+
+            // Simple text rendering (basic strokes)
+            function getTextPaths(text, size) {
+                const paths = [];
+                const charWidth = size * 0.4;
+                const startX = 0.5 - (text.length * charWidth) / 2;
+
+                const letters = {
+                    'F': [[0, 0], [0, 1], [0, 0.5], [0.6, 0.5], [0, 0], [0.7, 0]],
+                    'I': [[0.3, 0], [0.3, 1]],
+                    'B': [[0, 0], [0, 1], [0.5, 1], [0.6, 0.8], [0.5, 0.5], [0, 0.5], [0.5, 0.5], [0.6, 0.3], [0.5, 0], [0, 0]],
+                    'A': [[0, 1], [0.35, 0], [0.7, 1], [0.5, 0.5], [0.2, 0.5]],
+                    'C': [[0.7, 0.2], [0.3, 0], [0, 0.3], [0, 0.7], [0.3, 1], [0.7, 0.8]],
+                    'D': [[0, 0], [0, 1], [0.4, 1], [0.7, 0.7], [0.7, 0.3], [0.4, 0], [0, 0]],
+                    'E': [[0.7, 0], [0, 0], [0, 0.5], [0.5, 0.5], [0, 0.5], [0, 1], [0.7, 1]],
+                    'G': [[0.7, 0.3], [0.5, 0], [0, 0.3], [0, 0.7], [0.5, 1], [0.7, 0.7], [0.7, 0.5], [0.4, 0.5]],
+                    'H': [[0, 0], [0, 1], [0, 0.5], [0.7, 0.5], [0.7, 0], [0.7, 1]],
+                    'L': [[0, 0], [0, 1], [0.7, 1]],
+                    'M': [[0, 1], [0, 0], [0.35, 0.5], [0.7, 0], [0.7, 1]],
+                    'N': [[0, 1], [0, 0], [0.7, 1], [0.7, 0]],
+                    'O': [[0.35, 0], [0, 0.3], [0, 0.7], [0.35, 1], [0.7, 0.7], [0.7, 0.3], [0.35, 0]],
+                    'P': [[0, 1], [0, 0], [0.5, 0], [0.7, 0.2], [0.5, 0.5], [0, 0.5]],
+                    'R': [[0, 1], [0, 0], [0.5, 0], [0.7, 0.2], [0.5, 0.5], [0, 0.5], [0.7, 1]],
+                    'S': [[0.7, 0.2], [0.5, 0], [0, 0.2], [0, 0.4], [0.7, 0.6], [0.7, 0.8], [0.5, 1], [0, 0.8]],
+                    'T': [[0, 0], [0.7, 0], [0.35, 0], [0.35, 1]],
+                    'U': [[0, 0], [0, 0.8], [0.35, 1], [0.7, 0.8], [0.7, 0]],
+                    'V': [[0, 0], [0.35, 1], [0.7, 0]],
+                    'W': [[0, 0], [0.17, 1], [0.35, 0.5], [0.53, 1], [0.7, 0]],
+                    'X': [[0, 0], [0.7, 1], [0.35, 0.5], [0, 1], [0.7, 0]],
+                    'Y': [[0, 0], [0.35, 0.5], [0.7, 0], [0.35, 0.5], [0.35, 1]],
+                    'Z': [[0, 0], [0.7, 0], [0, 1], [0.7, 1]],
+                    '0': [[0.35, 0], [0, 0.3], [0, 0.7], [0.35, 1], [0.7, 0.7], [0.7, 0.3], [0.35, 0]],
+                    '1': [[0.2, 0.2], [0.4, 0], [0.4, 1], [0.2, 1], [0.6, 1]],
+                    '2': [[0, 0.2], [0.3, 0], [0.6, 0.2], [0.6, 0.4], [0, 1], [0.7, 1]],
+                    '3': [[0, 0.2], [0.3, 0], [0.6, 0.3], [0.3, 0.5], [0.6, 0.7], [0.3, 1], [0, 0.8]],
+                };
+
+                for (let c = 0; c < text.length; c++) {
+                    const ch = text[c];
+                    const strokes = letters[ch] || letters['?'] || [[0, 0], [0.5, 0.5]];
+                    const ox = startX + c * charWidth;
+
+                    for (let s = 0; s < strokes.length - 1; s++) {
+                        const [x1, y1] = strokes[s];
+                        const [x2, y2] = strokes[s + 1];
+                        for (let t = 0; t <= 10; t++) {
+                            paths.push({
+                                x: ox + (x1 + (x2 - x1) * (t / 10)) * charWidth * 0.8,
+                                y: 0.4 + (y1 + (y2 - y1) * (t / 10)) * size * 0.3
+                            });
+                        }
+                    }
+                }
+                return paths;
+            }
+
+            // UI Events
+            patternBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    patternBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentPattern = btn.dataset.pattern;
+                    $('textRow').style.display = currentPattern === 'text' ? 'block' : 'none';
+                    btnMill.disabled = currentPattern === 'none';
+                });
+            });
+            patternBtns[0].classList.add('active');
+
+            btnMill.addEventListener('click', () => {
+                if (currentPattern === 'none') return;
+                millPath = generatePath(currentPattern, parseFloat($('iSize').value));
+                millIndex = 0;
+                isMilling = true;
+                btnMill.disabled = true;
+                btnStop.disabled = false;
+                led.className = 'led milling';
+                stat.textContent = '正在铣削... 0%';
+            });
+
+            btnStop.addEventListener('click', () => {
+                isMilling = false;
+                btnMill.disabled = false;
+                btnStop.disabled = true;
+                simUni.uOn.value = 0;
+                beamMat.opacity = 0;
+                led.className = 'led';
+                stat.textContent = '已停止';
+                progress.style.width = '0%';
+            });
+
+            $('btnReset').addEventListener('click', () => {
+                renderer.setRenderTarget(rtA); renderer.clear();
+                renderer.setRenderTarget(rtB); renderer.clear();
+                renderer.setRenderTarget(null);
+                stat.textContent = '已重置';
+            });
+
+            // Save/Load
+            $('btnSave').addEventListener('click', () => {
+                const pixels = new Float32Array(SIM * SIM * 4);
+                renderer.readRenderTargetPixels(rtA, 0, 0, SIM, SIM, pixels);
+                const heightData = [];
+                for (let i = 0; i < SIM * SIM; i++) heightData.push(pixels[i * 4]);
+
+                const data = JSON.stringify({ version: 1, size: SIM, heights: heightData });
+                const blob = new Blob([data], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'fib_sample_' + Date.now() + '.json';
+                a.click();
+                stat.textContent = '已保存';
+            });
+
+            $('btnLoad').addEventListener('click', () => $('fileInput').click());
+            $('fileInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if (data.heights && data.size === SIM) {
+                            const pixels = new Float32Array(SIM * SIM * 4);
+                            for (let i = 0; i < data.heights.length; i++) {
+                                pixels[i * 4] = data.heights[i];
+                            }
+                            const tex = new THREE.DataTexture(pixels, SIM, SIM, THREE.RGBAFormat, THREE.FloatType);
+                            tex.needsUpdate = true;
+
+                            // Copy to render targets
+                            const copyMat = new THREE.MeshBasicMaterial({ map: tex });
+                            const copyMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), copyMat);
+                            const copyScene = new THREE.Scene();
+                            copyScene.add(copyMesh);
+
+                            renderer.setRenderTarget(rtA);
+                            renderer.render(copyScene, simCam);
+                            renderer.setRenderTarget(rtB);
+                            renderer.render(copyScene, simCam);
+                            renderer.setRenderTarget(null);
+
+                            stat.textContent = '已加载';
+                        }
+                    } catch (err) {
+                        stat.textContent = '加载失败';
+                    }
+                };
+                reader.readAsText(file);
+            });
+
+            // Profile canvas
+            const profileCanvas = $('profileCanvas');
+            const profileCtx = profileCanvas.getContext('2d');
+            profileCanvas.width = 400;
+            profileCanvas.height = 120;
+
+            function updateProfile() {
+                const pixels = new Float32Array(SIM * SIM * 4);
+                renderer.readRenderTargetPixels(rtA, 0, 0, SIM, SIM, pixels);
+
+                profileCtx.fillStyle = '#111';
+                profileCtx.fillRect(0, 0, 400, 120);
+
+                // Draw grid
+                profileCtx.strokeStyle = '#333';
+                profileCtx.lineWidth = 1;
+                for (let y = 0; y <= 120; y += 30) {
+                    profileCtx.beginPath();
+                    profileCtx.moveTo(0, y);
+                    profileCtx.lineTo(400, y);
+                    profileCtx.stroke();
+                }
+
+                // Sample middle row
+                const row = Math.floor(SIM / 2);
+                profileCtx.strokeStyle = '#4db8ff';
+                profileCtx.lineWidth = 2;
+                profileCtx.beginPath();
+
+                let maxDepth = 0;
+                for (let x = 0; x < SIM; x++) {
+                    const h = pixels[(row * SIM + x) * 4];
+                    maxDepth = Math.min(maxDepth, h);
+                    const px = (x / SIM) * 400;
+                    const py = 60 - h * 20;
+                    if (x === 0) profileCtx.moveTo(px, py);
+                    else profileCtx.lineTo(px, py);
+                }
+                profileCtx.stroke();
+
+                // Zero line
+                profileCtx.strokeStyle = '#666';
+                profileCtx.setLineDash([5, 5]);
+                profileCtx.beginPath();
+                profileCtx.moveTo(0, 60);
+                profileCtx.lineTo(400, 60);
+                profileCtx.stroke();
+                profileCtx.setLineDash([]);
+
+                $('maxDepth').textContent = (Math.abs(maxDepth) * 100).toFixed(2);
+            }
+
+            // Params
+            function updateParams() {
+                const v = +$('iVolt').value, c = +$('iCurr').value;
+                $('vVolt').textContent = v;
+                $('vCurr').textContent = c.toFixed(1);
+                $('vSize').textContent = $('iSize').value;
+                simUni.uR.value = 0.05 - (v / 30) * 0.04;
+                simUni.uI.value = c * 0.002;
+                simUni.uY.value = +$('iMat').value;
+                if (c > 10) simUni.uR.value *= 1.2;
+                beam.scale.setScalar(simUni.uR.value * 50);
+            }
+
+            $('iVolt').oninput = $('iCurr').oninput = $('iMat').onchange = $('iSize').oninput = updateParams;
+            updateParams();
+
+            // Manual milling
+            renderer.domElement.addEventListener('pointerdown', e => {
+                if (e.button === 0 && !isMilling) {
+                    isDown = true;
+                    simUni.uOn.value = 1;
+                    beamMat.opacity = 0.6;
+                    led.className = 'led milling';
+                }
+            }, { capture: true });
+
+            addEventListener('pointerup', e => {
+                if (e.button === 0 && !isMilling) {
+                    isDown = false;
+                    simUni.uOn.value = 0;
+                    beamMat.opacity = 0;
+                    led.className = 'led';
+                }
+            });
+
+            addEventListener('pointermove', e => {
+                mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+                ray.setFromCamera(mouse, camera);
+                if (ray.ray.intersectPlane(plane, hit)) {
+                    worldHit.copy(hit);
+                    const uvX = (hit.x + 5) / 10, uvY = (hit.z + 5) / 10;
+                    if (uvX >= 0 && uvX <= 1 && uvY >= 0 && uvY <= 1 && !isMilling) {
+                        simUni.uPos.value.set(uvX, 1 - uvY);
+                        beam.position.set(hit.x, 0, hit.z);
+                    }
+                }
+            });
+
+            // Particles
+            function updateParticles() {
+                if (simUni.uOn.value === 0) return;
+                const pos = pGeo.attributes.position.array;
+                for (let i = 0, emit = 5; i < PARTICLES && emit > 0; i++) {
+                    if (pLife[i] <= 0) {
+                        pLife[i] = 1;
+                        const wx = (simUni.uPos.value.x - 0.5) * 10;
+                        const wz = (0.5 - simUni.uPos.value.y) * 10;
+                        pos[i * 3] = wx + (Math.random() - 0.5) * 0.1;
+                        pos[i * 3 + 1] = 0;
+                        pos[i * 3 + 2] = wz + (Math.random() - 0.5) * 0.1;
+                        pVel[i * 3] = (Math.random() - 0.5) * 0.3;
+                        pVel[i * 3 + 1] = Math.random() * 0.5 + 0.2;
+                        pVel[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
+                        emit--;
+                    }
+                }
+                for (let i = 0; i < PARTICLES; i++) {
+                    if (pLife[i] > 0) {
+                        pos[i * 3] += pVel[i * 3];
+                        pos[i * 3 + 1] += pVel[i * 3 + 1];
+                        pos[i * 3 + 2] += pVel[i * 3 + 2];
+                        pVel[i * 3 + 1] -= 0.01;
+                        pLife[i] -= 0.02;
+                    } else pos[i * 3 + 1] = -100;
+                }
+                pGeo.attributes.position.needsUpdate = true;
+            }
+
+            // Animation
+            let frameCount = 0;
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+
+                // Auto milling
+                if (isMilling && millIndex < millPath.length) {
+                    const pt = millPath[millIndex];
+                    simUni.uPos.value.set(pt.x, pt.y);
+                    simUni.uOn.value = 1;
+                    beamMat.opacity = 0.6;
+
+                    const wx = (pt.x - 0.5) * 10;
+                    const wz = (0.5 - pt.y) * 10;
+                    beam.position.set(wx, 0, wz);
+
+                    millIndex += 2; // Speed
+                    millProgress = (millIndex / millPath.length) * 100;
+                    progress.style.width = millProgress + '%';
+                    stat.textContent = '正在铣削... ' + Math.floor(millProgress) + '%';
+
+                    if (millIndex >= millPath.length) {
+                        isMilling = false;
+                        simUni.uOn.value = 0;
+                        beamMat.opacity = 0;
+                        btnMill.disabled = false;
+                        btnStop.disabled = true;
+                        led.className = 'led on';
+                        stat.textContent = '铣削完成!';
+                        progress.style.width = '100%';
+                    }
+                }
+
+                // GPGPU
+                simUni.tH.value = rtA.texture;
+                renderer.setRenderTarget(rtB);
+                renderer.render(simScene, simCam);
+                [rtA, rtB] = [rtB, rtA];
+
+                updateParticles();
+
+                renderer.setRenderTarget(null);
+                terrainUni.tH.value = rtA.texture;
+                renderer.render(scene, camera);
+
+                // Update profile every 30 frames
+                if (++frameCount % 30 === 0) updateProfile();
+            }
+
+            addEventListener('resize', () => {
+                camera.aspect = innerWidth / innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(innerWidth, innerHeight);
+            });
+
+            animate();
+        })();
+    </script>
+</body>
+
+</html>

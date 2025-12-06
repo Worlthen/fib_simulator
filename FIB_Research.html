@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIB 科研分析工具</title>
+    <style>
+        * {
+            margin: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #0a0a0a;
+            font-family: 'Segoe UI', sans-serif;
+            color: #fff;
+        }
+
+        #canvas {
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+
+        .panel {
+            position: fixed;
+            background: rgba(10, 15, 20, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 15px;
+            z-index: 10;
+        }
+
+        #ctrlPanel {
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        #dataPanel {
+            bottom: 20px;
+            left: 20px;
+            width: 350px;
+        }
+
+        h1 {
+            font-size: 14px;
+            color: #00d4aa;
+            border-bottom: 1px solid #2a4a3a;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h2 {
+            font-size: 10px;
+            color: #00d4aa;
+            text-transform: uppercase;
+            margin: 12px 0 6px;
+            letter-spacing: 1px;
+            opacity: 0.8;
+        }
+
+        .row {
+            margin-bottom: 8px;
+        }
+
+        .row label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            margin-bottom: 3px;
+            color: #aaa;
+        }
+
+        .val {
+            color: #00d4aa;
+            font-weight: bold;
+            font-family: 'Consolas', monospace;
+        }
+
+        .unit {
+            color: #666;
+            font-size: 10px;
+        }
+
+        input[type=range] {
+            width: 100%;
+            -webkit-appearance: none;
+            background: #1a2a3a;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #00d4aa;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        select {
+            width: 100%;
+            background: #1a2a3a;
+            color: #fff;
+            border: 1px solid #2a4a5a;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d4aa, #00a080);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #00ffcc, #00c4aa);
+        }
+
+        .btn-danger {
+            background: #c62828;
+            color: #fff;
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, #7c4dff, #536dfe);
+            color: #fff;
+        }
+
+        .btn-export:hover {
+            background: linear-gradient(135deg, #9e7bff, #738ffe);
+        }
+
+        .btn-secondary {
+            background: #2a3a4a;
+            color: #fff;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+            min-width: 70px;
+        }
+
+        /* Multi-layer Material Editor */
+        .layer-stack {
+            background: #0a1520;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 8px 0;
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            background: #1a2530;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            border-left: 4px solid #888;
+        }
+
+        .layer-item .name {
+            flex: 1;
+            font-size: 11px;
+        }
+
+        .layer-item .thickness {
+            font-size: 10px;
+            color: #888;
+        }
+
+        .layer-item .remove {
+            background: none;
+            border: none;
+            color: #f44;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .layer-colors {
+            display: flex;
+            gap: 2px;
+        }
+
+        .layer-colors span {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        /* Data Display */
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .data-box {
+            background: #0a1520;
+            border: 1px solid #1a3040;
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .data-box .title {
+            font-size: 9px;
+            color: #668;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .data-box .value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00d4aa;
+            font-family: 'Consolas', monospace;
+        }
+
+        .data-box .unit {
+            font-size: 10px;
+            color: #446;
+            margin-left: 4px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            font-size: 11px;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid #2a3a4a;
+        }
+
+        .led {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00d4aa;
+            margin-right: 8px;
+            opacity: 0.3;
+        }
+
+        .led.on {
+            opacity: 1;
+            box-shadow: 0 0 10px #00d4aa;
+        }
+
+        .led.milling {
+            background: #ff5722;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        .hint {
+            font-size: 9px;
+            color: #445;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        /* Layer visualization bar */
+        .layer-viz {
+            height: 30px;
+            border-radius: 4px;
+            overflow: hidden;
+            display: flex;
+            margin: 8px 0;
+            border: 1px solid #2a3a4a;
+        }
+
+        .layer-viz-item {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: #fff;
+            text-shadow: 0 0 2px #000;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a2a3a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3a5a7a;
+            border-radius: 3px;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+</head>
+
+<body>
+    <div id="ctrlPanel" class="panel">
+        <h1>🔬 FIB 科研分析工具</h1>
+
+        <h2>离子束参数</h2>
+        <div class="row">
+            <label>加速电压 <span><span class="val" id="vVolt">30</span> <span class="unit">kV</span></span></label>
+            <input type="range" id="iVolt" min="5" max="30" step="1" value="30">
+        </div>
+        <div class="row">
+            <label>束流电流 <span><span class="val" id="vCurr">5.00</span> <span class="unit">nA</span></span></label>
+            <input type="range" id="iCurr" min="0.01" max="20" step="0.01" value="5">
+        </div>
+        <div class="row">
+            <label>驻留时间 <span><span class="val" id="vDwell">1.0</span> <span class="unit">μs</span></span></label>
+            <input type="range" id="iDwell" min="0.1" max="10" step="0.1" value="1.0">
+        </div>
+
+        <h2>多层材料结构</h2>
+        <div class="layer-viz" id="layerViz"></div>
+        <div class="layer-stack" id="layerStack">
+            <!-- Layers added dynamically -->
+        </div>
+        <div class="row">
+            <select id="addLayerSelect">
+                <option value="">+ 添加材料层...</option>
+                <option value="Si|1.0|#607d8b|100">Silicon (Si)</option>
+                <option value="SiO2|0.8|#90caf9|50">SiO₂ (氧化硅)</option>
+                <option value="Au|2.5|#ffd54f|30">Gold (Au)</option>
+                <option value="Pt|2.0|#b0bec5|20">Platinum (Pt)</option>
+                <option value="Cu|1.8|#ff8a65|50">Copper (Cu)</option>
+                <option value="Al|1.5|#e0e0e0|40">Aluminum (Al)</option>
+                <option value="Ti|0.6|#78909c|30">Titanium (Ti)</option>
+                <option value="W|0.4|#546e7a|20">Tungsten (W)</option>
+                <option value="C|0.2|#424242|10">Carbon (C)</option>
+            </select>
+        </div>
+
+        <h2>导出</h2>
+        <div class="btn-group">
+            <button class="btn btn-export" id="btnSTL">📦 导出 STL</button>
+            <button class="btn btn-secondary" id="btnJSON">💾 导出数据</button>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-danger" id="btnReset">重置</button>
+        </div>
+
+        <div class="status">
+            <div class="led" id="led"></div>
+            <span id="stat">就绪</span>
+        </div>
+        <div class="hint">左键加工 | 右键旋转 | 滚轮缩放<br>不同材料层显示不同颜色</div>
+    </div>
+
+    <div id="dataPanel" class="panel">
+        <h1>📊 实时分析数据</h1>
+        <div class="data-grid">
+            <div class="data-box">
+                <div class="title">累计剂量</div>
+                <div><span class="value" id="dDose">0.00</span><span class="unit">×10¹⁶ ions/cm²</span></div>
+            </div>
+            <div class="data-box">
+                <div class="title">加工时间</div>
+                <div><span class="value" id="dTime">0.0</span><span class="unit">s</span></div>
+            </div>
+            <div class="data-box">
+                <div class="title">最大深度</div>
+                <div><span class="value" id="dDepth">0.00</span><span class="unit">nm</span></div>
+            </div>
+            <div class="data-box">
+                <div class="title">移除体积</div>
+                <div><span class="value" id="dVolume">0.00</span><span class="unit">μm³</span></div>
+            </div>
+            <div class="data-box">
+                <div class="title">当前材料层</div>
+                <div><span class="value" id="dLayer">-</span></div>
+            </div>
+            <div class="data-box">
+                <div class="title">溅射率</div>
+                <div><span class="value" id="dYield">0.00</span><span class="unit">atoms/ion</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas"></div>
+
+    <!-- Multi-layer simulation shader -->
+    <script id="simFrag" type="x-shader/x-fragment">
+        uniform sampler2D tH;
+        uniform vec2 uPos;
+        uniform float uR, uI;
+        uniform int uOn;
+        
+        // Multi-layer support (up to 8 layers)
+        uniform float uLayerDepths[8];  // Cumulative depth boundaries
+        uniform float uLayerYields[8];  // Sputter yields per layer
+        uniform int uLayerCount;
+        
+        varying vec2 vUv;
+        
+        const float TEX = 1.0/512.0, F = 1.8, S = 2.5, TM = 1.3;
+        
+        float gauss(vec2 p, vec2 c, float s) { vec2 d = p - c; return exp(-dot(d,d) / (2.0*s*s)); }
+        
+        vec3 getNormal() {
+            float hL = texture2D(tH, vUv - vec2(TEX,0)).r;
+            float hR = texture2D(tH, vUv + vec2(TEX,0)).r;
+            float hD = texture2D(tH, vUv - vec2(0,TEX)).r;
+            float hU = texture2D(tH, vUv + vec2(0,TEX)).r;
+            return normalize(vec3(-(hR-hL)*0.05, 1.0, -(hU-hD)*0.05));
+        }
+        
+        float yamamura(float ct) {
+            ct = max(ct, 0.1);
+            float t = acos(ct);
+            if(t > TM) return exp(-(t-TM)*5.0);
+            return pow(ct, -F) * exp(-S*(1.0/ct - 1.0));
+        }
+        
+        // Get sputter yield for current depth
+        float getYieldAtDepth(float depth) {
+            float absDepth = abs(depth);
+            for(int i = 0; i < 8; i++) {
+                if(i >= uLayerCount) break;
+                if(absDepth < uLayerDepths[i]) {
+                    return uLayerYields[i];
+                }
+            }
+            return uLayerYields[uLayerCount - 1];
+        }
+        
+        void main() {
+            float h = texture2D(tH, vUv).r;
+            
+            if(uOn == 1) {
+                float beam = gauss(vUv, uPos, uR);
+                vec3 n = getNormal();
+                float ct = max(n.y, 0.0);
+                float y = yamamura(ct);
+                
+                // Get material-specific yield based on current depth
+                float matYield = getYieldAtDepth(h);
+                
+                float rem = beam * uI * matYield * y * min(1.0/max(ct,0.3), 3.0);
+                if(rem > 1e-5) h -= rem;
+                
+                float d = length(vUv - uPos);
+                if(d > uR*2.0 && d < uR*4.0) h += beam * uI * 0.03 * exp(-(d - uR*2.0)*10.0);
+            }
+            
+            // Surface diffusion
+            float hL = texture2D(tH, vUv - vec2(TEX,0)).r;
+            float hR = texture2D(tH, vUv + vec2(TEX,0)).r;
+            float hD = texture2D(tH, vUv - vec2(0,TEX)).r;
+            float hU = texture2D(tH, vUv + vec2(0,TEX)).r;
+            h += ((hL+hR+hD+hU)/4.0 - h) * 0.001;
+            
+            gl_FragColor = vec4(clamp(h, -5.0, 0.5), 0, 0, 1);
+        }
+    </script>
+    <script id="simVert" type="x-shader/x-vertex">
+        varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+    </script>
+
+    <!-- Multi-layer render shader -->
+    <script id="renVert" type="x-shader/x-vertex">
+        uniform sampler2D tH;
+        varying vec2 vUv; varying float vH;
+        void main() {
+            vUv = uv; float h = texture2D(tH, uv).r; vH = h;
+            vec3 p = position; p.y += h * 2.0;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+        }
+    </script>
+    <script id="renFrag" type="x-shader/x-fragment">
+        uniform sampler2D tH;
+        uniform float uLayerDepths[8];
+        uniform vec3 uLayerColors[8];
+        uniform int uLayerCount;
+        
+        varying vec2 vUv; varying float vH;
+        
+        vec3 getLayerColor(float depth) {
+            float absDepth = abs(depth);
+            for(int i = 0; i < 8; i++) {
+                if(i >= uLayerCount) break;
+                if(absDepth < uLayerDepths[i]) {
+                    return uLayerColors[i];
+                }
+            }
+            return uLayerColors[0];
+        }
+        
+        void main() {
+            float TEX = 1.0/512.0;
+            float h = texture2D(tH, vUv).r * 2.0;
+            float hx = texture2D(tH, vUv + vec2(TEX,0)).r * 2.0;
+            float hy = texture2D(tH, vUv + vec2(0,TEX)).r * 2.0;
+            vec3 n = normalize(cross(vec3(0, hy-h, TEX), vec3(TEX, hx-h, 0)));
+            
+            vec3 L = normalize(vec3(1, 2, 1));
+            float diff = max(dot(n, L), 0.0);
+            float spec = pow(max(dot(reflect(-L, n), vec3(0,0,1)), 0.0), 32.0);
+            float edge = pow(1.0 - abs(n.y), 2.0);
+            
+            vec3 base = getLayerColor(vH);
+            vec3 col = base * (0.3 + diff * 0.7) + vec3(0.3) * spec + vec3(0.2) * edge;
+            
+            gl_FragColor = vec4(col, 1.0);
+        }
+    </script>
+
+    <script>
+        (function () {
+            const SIM = 512, PARTICLES = 800;
+            const $ = id => document.getElementById(id);
+
+            // Layer data structure
+            let layers = [
+                { name: 'Si', yield: 1.0, color: '#607d8b', thickness: 500 }
+            ];
+
+            // Three.js Setup
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x030508);
+            scene.fog = new THREE.FogExp2(0x030508, 0.015);
+
+            const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 100);
+            camera.position.set(0, 8, 8);
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(innerWidth, innerHeight);
+            renderer.setPixelRatio(devicePixelRatio);
+            $('canvas').appendChild(renderer.domElement);
+
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+
+            // GPGPU
+            const rtOpts = { format: THREE.RGBAFormat, type: THREE.FloatType, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter };
+            let rtA = new THREE.WebGLRenderTarget(SIM, SIM, rtOpts);
+            let rtB = new THREE.WebGLRenderTarget(SIM, SIM, rtOpts);
+
+            const simScene = new THREE.Scene();
+            const simCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+            // Initialize uniform arrays
+            const defaultDepths = new Array(8).fill(100);
+            const defaultYields = new Array(8).fill(1.0);
+            const defaultColors = new Array(8).fill(new THREE.Color(0.5, 0.5, 0.5));
+
+            const simUni = {
+                tH: { value: null },
+                uPos: { value: new THREE.Vector2(0.5, 0.5) },
+                uR: { value: 0.02 },
+                uI: { value: 0.01 },
+                uOn: { value: 0 },
+                uLayerDepths: { value: defaultDepths },
+                uLayerYields: { value: defaultYields },
+                uLayerCount: { value: 1 }
+            };
+            const simMat = new THREE.ShaderMaterial({
+                uniforms: simUni,
+                vertexShader: $('simVert').textContent,
+                fragmentShader: $('simFrag').textContent
+            });
+            simScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), simMat));
+
+            // Terrain with multi-layer colors
+            const terrainGeo = new THREE.PlaneGeometry(10, 10, 256, 256);
+            terrainGeo.rotateX(-Math.PI / 2);
+            const terrainUni = {
+                tH: { value: null },
+                uLayerDepths: { value: defaultDepths },
+                uLayerColors: { value: defaultColors },
+                uLayerCount: { value: 1 }
+            };
+            const terrainMat = new THREE.ShaderMaterial({
+                uniforms: terrainUni,
+                vertexShader: $('renVert').textContent,
+                fragmentShader: $('renFrag').textContent
+            });
+            const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+            scene.add(terrain);
+            scene.add(new THREE.GridHelper(20, 40, 0x1a2a3a, 0x0a1520));
+
+            // Beam
+            const beamGeo = new THREE.CylinderGeometry(0.02, 0.05, 10, 12);
+            beamGeo.translate(0, 5, 0);
+            const beamMat = new THREE.MeshBasicMaterial({ color: 0x00d4aa, transparent: true, opacity: 0, blending: THREE.AdditiveBlending });
+            const beam = new THREE.Mesh(beamGeo, beamMat);
+            scene.add(beam);
+
+            // Particles
+            const pPos = new Float32Array(PARTICLES * 3);
+            const pVel = new Float32Array(PARTICLES * 3);
+            const pLife = new Float32Array(PARTICLES);
+            for (let i = 0; i < PARTICLES; i++) { pPos[i * 3 + 1] = -100; }
+            const pGeo = new THREE.BufferGeometry();
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+            scene.add(new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0x00ffaa, size: 0.04, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending })));
+
+            // Interaction
+            const ray = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+            const hit = new THREE.Vector3();
+            let isDown = false;
+
+            // Analysis data
+            let totalDose = 0;
+            let totalTime = 0;
+            let maxDepth = 0;
+            let lastFrameTime = performance.now();
+
+            // Update layer uniforms
+            function updateLayerUniforms() {
+                const depths = new Array(8).fill(100);
+                const yields = new Array(8).fill(1.0);
+                const colors = new Array(8).fill(null).map(() => new THREE.Color(0.5, 0.5, 0.5));
+
+                let cumDepth = 0;
+                for (let i = 0; i < layers.length && i < 8; i++) {
+                    cumDepth += layers[i].thickness / 500; // Scale to simulation units
+                    depths[i] = cumDepth;
+                    yields[i] = layers[i].yield;
+                    colors[i] = new THREE.Color(layers[i].color);
+                }
+
+                simUni.uLayerDepths.value = depths;
+                simUni.uLayerYields.value = yields;
+                simUni.uLayerCount.value = layers.length;
+
+                terrainUni.uLayerDepths.value = depths;
+                terrainUni.uLayerColors.value = colors;
+                terrainUni.uLayerCount.value = layers.length;
+
+                renderLayerStack();
+                renderLayerViz();
+            }
+
+            // Render layer stack UI
+            function renderLayerStack() {
+                const stack = $('layerStack');
+                stack.innerHTML = '';
+
+                layers.forEach((layer, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'layer-item';
+                    div.style.borderLeftColor = layer.color;
+                    div.innerHTML = `
+                    <span class="name">${layer.name}</span>
+                    <span class="thickness">${layer.thickness} nm</span>
+                    <button class="remove" data-index="${i}">×</button>
+                `;
+                    stack.appendChild(div);
+                });
+
+                stack.querySelectorAll('.remove').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const idx = parseInt(e.target.dataset.index);
+                        if (layers.length > 1) {
+                            layers.splice(idx, 1);
+                            updateLayerUniforms();
+                        }
+                    });
+                });
+            }
+
+            // Render layer visualization bar
+            function renderLayerViz() {
+                const viz = $('layerViz');
+                const total = layers.reduce((s, l) => s + l.thickness, 0);
+                viz.innerHTML = layers.map(l =>
+                    `<div class="layer-viz-item" style="background:${l.color}; width:${(l.thickness / total) * 100}%">${l.name}</div>`
+                ).join('');
+            }
+
+            // Add layer handler
+            $('addLayerSelect').addEventListener('change', (e) => {
+                if (!e.target.value) return;
+                const [name, yieldVal, color, thickness] = e.target.value.split('|');
+                layers.push({ name, yield: parseFloat(yieldVal), color, thickness: parseInt(thickness) });
+                updateLayerUniforms();
+                e.target.value = '';
+            });
+
+            // Params
+            function updateParams() {
+                const v = +$('iVolt').value, c = +$('iCurr').value, d = +$('iDwell').value;
+                $('vVolt').textContent = v;
+                $('vCurr').textContent = c.toFixed(2);
+                $('vDwell').textContent = d.toFixed(1);
+                simUni.uR.value = 0.05 - (v / 30) * 0.04;
+                simUni.uI.value = c * 0.002 * d;
+                if (c > 10) simUni.uR.value *= 1.2;
+                beam.scale.setScalar(simUni.uR.value * 50);
+            }
+
+            $('iVolt').oninput = $('iCurr').oninput = $('iDwell').oninput = updateParams;
+
+            // Reset
+            $('btnReset').addEventListener('click', () => {
+                renderer.setRenderTarget(rtA); renderer.clear();
+                renderer.setRenderTarget(rtB); renderer.clear();
+                renderer.setRenderTarget(null);
+                totalDose = totalTime = maxDepth = 0;
+                $('stat').textContent = '已重置';
+            });
+
+            // STL Export
+            $('btnSTL').addEventListener('click', () => {
+                $('stat').textContent = '正在生成 STL...';
+
+                // Read height data
+                const pixels = new Float32Array(SIM * SIM * 4);
+                renderer.readRenderTargetPixels(rtA, 0, 0, SIM, SIM, pixels);
+
+                // Create detailed geometry for export
+                const exportGeo = new THREE.PlaneGeometry(10, 10, 128, 128);
+                exportGeo.rotateX(-Math.PI / 2);
+                const positions = exportGeo.attributes.position.array;
+
+                for (let i = 0; i < positions.length / 3; i++) {
+                    const x = positions[i * 3];
+                    const z = positions[i * 3 + 2];
+                    const uvX = Math.floor(((x + 5) / 10) * (SIM - 1));
+                    const uvY = Math.floor(((z + 5) / 10) * (SIM - 1));
+                    const idx = (uvY * SIM + uvX) * 4;
+                    positions[i * 3 + 1] = pixels[idx] * 2;
+                }
+                exportGeo.computeVertexNormals();
+
+                const exportMesh = new THREE.Mesh(exportGeo);
+                const exporter = new THREE.STLExporter();
+                const stl = exporter.parse(exportMesh);
+
+                const blob = new Blob([stl], { type: 'application/octet-stream' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'fib_sample_' + Date.now() + '.stl';
+                a.click();
+
+                $('stat').textContent = 'STL 已导出';
+            });
+
+            // JSON Export
+            $('btnJSON').addEventListener('click', () => {
+                const pixels = new Float32Array(SIM * SIM * 4);
+                renderer.readRenderTargetPixels(rtA, 0, 0, SIM, SIM, pixels);
+
+                const heights = [];
+                for (let i = 0; i < SIM * SIM; i++) heights.push(pixels[i * 4]);
+
+                const data = {
+                    version: 2,
+                    timestamp: new Date().toISOString(),
+                    parameters: {
+                        voltage_kV: +$('iVolt').value,
+                        current_nA: +$('iCurr').value,
+                        dwell_us: +$('iDwell').value
+                    },
+                    layers: layers,
+                    analysis: {
+                        dose_ions_cm2: totalDose * 1e16,
+                        time_s: totalTime,
+                        maxDepth_nm: maxDepth * 100,
+                        volume_um3: parseFloat($('dVolume').textContent)
+                    },
+                    size: SIM,
+                    heights: heights
+                };
+
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'fib_research_' + Date.now() + '.json';
+                a.click();
+
+                $('stat').textContent = '数据已导出';
+            });
+
+            // Pointer events
+            renderer.domElement.addEventListener('pointerdown', e => {
+                if (e.button === 0) {
+                    isDown = true;
+                    simUni.uOn.value = 1;
+                    beamMat.opacity = 0.6;
+                    $('led').className = 'led milling';
+                }
+            }, { capture: true });
+
+            addEventListener('pointerup', e => {
+                if (e.button === 0) {
+                    isDown = false;
+                    simUni.uOn.value = 0;
+                    beamMat.opacity = 0;
+                    $('led').className = 'led on';
+                }
+            });
+
+            addEventListener('pointermove', e => {
+                mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+                ray.setFromCamera(mouse, camera);
+                if (ray.ray.intersectPlane(plane, hit)) {
+                    const uvX = (hit.x + 5) / 10, uvY = (hit.z + 5) / 10;
+                    if (uvX >= 0 && uvX <= 1 && uvY >= 0 && uvY <= 1) {
+                        simUni.uPos.value.set(uvX, 1 - uvY);
+                        beam.position.set(hit.x, 0, hit.z);
+                    }
+                }
+            });
+
+            // Particles
+            function updateParticles() {
+                if (simUni.uOn.value === 0) return;
+                const pos = pGeo.attributes.position.array;
+                for (let i = 0, emit = 4; i < PARTICLES && emit > 0; i++) {
+                    if (pLife[i] <= 0) {
+                        pLife[i] = 1;
+                        const wx = (simUni.uPos.value.x - 0.5) * 10;
+                        const wz = (0.5 - simUni.uPos.value.y) * 10;
+                        pos[i * 3] = wx + (Math.random() - 0.5) * 0.1;
+                        pos[i * 3 + 1] = 0;
+                        pos[i * 3 + 2] = wz + (Math.random() - 0.5) * 0.1;
+                        pVel[i * 3] = (Math.random() - 0.5) * 0.25;
+                        pVel[i * 3 + 1] = Math.random() * 0.4 + 0.15;
+                        pVel[i * 3 + 2] = (Math.random() - 0.5) * 0.25;
+                        emit--;
+                    }
+                }
+                for (let i = 0; i < PARTICLES; i++) {
+                    if (pLife[i] > 0) {
+                        pos[i * 3] += pVel[i * 3];
+                        pos[i * 3 + 1] += pVel[i * 3 + 1];
+                        pos[i * 3 + 2] += pVel[i * 3 + 2];
+                        pVel[i * 3 + 1] -= 0.008;
+                        pLife[i] -= 0.025;
+                    } else pos[i * 3 + 1] = -100;
+                }
+                pGeo.attributes.position.needsUpdate = true;
+            }
+
+            // Analysis update
+            let frameCount = 0;
+            function updateAnalysis() {
+                const now = performance.now();
+                const dt = (now - lastFrameTime) / 1000;
+                lastFrameTime = now;
+
+                if (simUni.uOn.value === 1) {
+                    const current = +$('iCurr').value * 1e-9; // nA to A
+                    const charge = current * dt;
+                    const ions = charge / 1.6e-19;
+                    const beamArea = Math.PI * Math.pow(simUni.uR.value * 5, 2) * 1e-8; // cm²
+                    totalDose += ions / beamArea / 1e16;
+                    totalTime += dt;
+                }
+
+                $('dDose').textContent = totalDose.toFixed(2);
+                $('dTime').textContent = totalTime.toFixed(1);
+
+                // Sample depth and volume every 30 frames
+                if (++frameCount % 30 === 0) {
+                    const pixels = new Float32Array(SIM * SIM * 4);
+                    renderer.readRenderTargetPixels(rtA, 0, 0, SIM, SIM, pixels);
+
+                    let minH = 0, volume = 0;
+                    for (let i = 0; i < SIM * SIM; i++) {
+                        const h = pixels[i * 4];
+                        if (h < minH) minH = h;
+                        if (h < 0) volume -= h;
+                    }
+
+                    maxDepth = Math.abs(minH);
+                    $('dDepth').textContent = (maxDepth * 100).toFixed(1);
+
+                    // Volume in μm³ (sim unit * scale * pixel area)
+                    const pixelArea = (10 / SIM) * (10 / SIM); // μm²
+                    const vol = volume * 2 * pixelArea; // multiply by height scale
+                    $('dVolume').textContent = vol.toFixed(2);
+
+                    // Current layer
+                    const depthNm = maxDepth * 500;
+                    let cumDepth = 0, currentLayer = layers[0].name;
+                    for (const layer of layers) {
+                        cumDepth += layer.thickness;
+                        if (depthNm < cumDepth) { currentLayer = layer.name; break; }
+                        currentLayer = layer.name;
+                    }
+                    $('dLayer').textContent = currentLayer;
+
+                    // Effective yield
+                    let yieldAtDepth = layers[0].yield;
+                    cumDepth = 0;
+                    for (const layer of layers) {
+                        cumDepth += layer.thickness / 500;
+                        if (maxDepth < cumDepth) { yieldAtDepth = layer.yield; break; }
+                    }
+                    $('dYield').textContent = yieldAtDepth.toFixed(2);
+                }
+            }
+
+            // Animation
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+
+                simUni.tH.value = rtA.texture;
+                renderer.setRenderTarget(rtB);
+                renderer.render(simScene, simCam);
+                [rtA, rtB] = [rtB, rtA];
+
+                updateParticles();
+                updateAnalysis();
+
+                renderer.setRenderTarget(null);
+                terrainUni.tH.value = rtA.texture;
+                renderer.render(scene, camera);
+            }
+
+            addEventListener('resize', () => {
+                camera.aspect = innerWidth / innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(innerWidth, innerHeight);
+            });
+
+            updateParams();
+            updateLayerUniforms();
+            animate();
+        })();
+    </script>
+</body>
+
+</html>
