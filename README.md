@@ -4,7 +4,7 @@
 
 ## 🌐 在线演示
 
-**[点击这里体验 →](https://yourname.github.io/fib-simulator/)**
+**[点击这里体验 →](https://worlthen.github.io/fib_simulator/)**
 
 ## 📦 包含工具
 
