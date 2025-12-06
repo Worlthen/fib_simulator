@@ -194,9 +194,27 @@
             font-size: 11px;
         }
 
-        .layer-item .thickness {
+        .layer-item .thickness-input {
+            width: 60px;
+            background: #0a1520;
+            border: 1px solid #2a4a5a;
+            color: #00d4aa;
+            padding: 3px 6px;
+            border-radius: 3px;
             font-size: 10px;
-            color: #888;
+            font-family: 'Consolas', monospace;
+            text-align: right;
+        }
+
+        .layer-item .thickness-input:focus {
+            outline: none;
+            border-color: #00d4aa;
+        }
+
+        .layer-item .thickness-unit {
+            font-size: 9px;
+            color: #666;
+            margin-left: 2px;
         }
 
         .layer-item .remove {
@@ -205,6 +223,11 @@
             color: #f44;
             cursor: pointer;
             font-size: 14px;
+            padding: 2px 6px;
+        }
+
+        .layer-item .remove:hover {
+            color: #ff6666;
         }
 
         .layer-colors {
@@ -692,12 +715,25 @@
                     div.style.borderLeftColor = layer.color;
                     div.innerHTML = `
                     <span class="name">${layer.name}</span>
-                    <span class="thickness">${layer.thickness} nm</span>
+                    <input type="number" class="thickness-input" data-index="${i}" value="${layer.thickness}" min="1" max="2000" step="10">
+                    <span class="thickness-unit">nm</span>
                     <button class="remove" data-index="${i}">×</button>
                 `;
                     stack.appendChild(div);
                 });
 
+                // 厚度修改事件
+                stack.querySelectorAll('.thickness-input').forEach(input => {
+                    input.addEventListener('change', (e) => {
+                        const idx = parseInt(e.target.dataset.index);
+                        const newThickness = parseInt(e.target.value) || 10;
+                        layers[idx].thickness = Math.max(1, Math.min(2000, newThickness));
+                        e.target.value = layers[idx].thickness;
+                        updateLayerUniforms();
+                    });
+                });
+
+                // 删除按钮事件
                 stack.querySelectorAll('.remove').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const idx = parseInt(e.target.dataset.index);
